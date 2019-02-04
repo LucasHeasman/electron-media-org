@@ -20,7 +20,9 @@
     "prod": "webpack --config webpack.build.config.js && electron --noDevServer .",
     "dev": "webpack-dev-server --hot --host 0.0.0.0 --port 4000 --config=./webpack.dev.config.js",
     "build": "webpack --config webpack.build.config.js",
+    "rebuild": "electron-rebuild -f -w sqlite3",
     "package": "webpack --config webpack.build.config.js",
+    "postinstall": "electron-builder install-app-deps",
     "postpackage": "electron-packager ./ --out=./builds"
   },
   "devDependencies": {
@@ -30,7 +32,9 @@
     "babili-webpack-plugin": "^0.1.2",
     "css-loader": "^0.28.11",
     "electron": "^1.7.8",
+    "electron-builder": "^20.38.5",
     "electron-packager": "^9.1.0",
+    "electron-rebuild": "^1.8.2",
     "extract-text-webpack-plugin": "^3.0.1",
     "file-loader": "^1.1.5",
     "html-webpack-plugin": "^2.28.0",
@@ -42,8 +46,11 @@
   },
   "dependencies": {
     "bootstrap": "^4.2.1",
+    "jquery": "^3.3.1",
+    "knex": "^0.16.3",
     "react-router-dom": "^4.3.1",
     "react-sidebar": "^3.0.2",
-    "reactstrap": "^7.1.0"
+    "reactstrap": "^7.1.0",
+    "sqlite3": "^4.0.6"
   }
 }

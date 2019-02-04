@@ -2,13 +2,29 @@
 
 // Import parts of electron to use
 const {app, BrowserWindow, ipcMain} = require('electron');
-const path = require('path')
-const url = require('url')
+const path = require('path');
+const url = require('url');
 
+// File system
+const fs = require('fs');
+
+// Database
+let knex = require('knex') ({
+  client: 'sqlite3',
+  connection: {
+    filename: './database.sqlite'
+  },
+  useNullAsDefault: true
+})
+
+// Constants used for IPCs
 const {
   CATCH_ON_MAIN,
-  SEND_TO_RENDERER
+  SEND_TO_RENDERER,
+  GET_ALL_FILES,
+  RETURN_ALL_FILES
 } = require('./utils/constants');
+
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
@@ -22,7 +38,7 @@ if ( process.defaultApp || /[\\/]electron-prebuilt[\\/]/.test(process.execPath) 
 function createWindow() {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width:1600, height:1200, minWidth: 850, minHeight: 650, show: false
+    width:1600, height:1200, minWidth: 850, minHeight: 650, show: false, icon:__dirname+'/src/assets/icons/mediaIcon.png'
   });
 
   // and load the index.html of the app.
@@ -90,4 +106,13 @@ app.on('activate', () => {
 ipcMain.on(CATCH_ON_MAIN, (event, args) => {
   console.log('Here 001', args);
   mainWindow.send(SEND_TO_RENDERER, 'pong');
+})
+
+// Get all records
+ipcMain.on(GET_ALL_FILES, (event) => {
+  let result = knex.select('fileName', 'description', 'dateAdded').from('files');
+  console.log(result);
+  result.then(function(data) {
+    mainWindow.send(RETURN_ALL_FILES, data);
+  });
 })
