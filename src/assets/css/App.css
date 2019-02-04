@@ -1,4 +1,48 @@
-h1 {
-  font-family: helvetica;
-  font-weight: 200;
+.sidebarBtn {
+  z-index: 5;
+  position: absolute;
+  top: 0px;
+  transition: 0.3s;
+  text-decoration: none;
+  color: gray;
+  border: 1px solid gray;
+  border-top: none;
+  padding: 0px 5px 0px 5px;
+}
+
+.sidebarContainer {
+  height: 100%;
+}
+
+.sidebarBtnOpen {
+  top: -1px;
+  right: 0px;
+  padding-left: 8px;
+  border-radius: 0 0 0 5px;
+  border-right: none;
+}
+
+.sidebarBtnClosed {
+  left: 0px;
+  padding-right: 8px;
+  border-radius: 0 0 5px 0;
+  border-left: none;
+}
+
+.sidebarCard {
+  min-height: 50%;
+  max-height: 50%;
+  border-radius: 0px;
+}
+
+.sidebarCardBody {
+  overflow-y: auto;
+}
+
+.sidebarContent {
+  position: relative;
+  min-width: 250px;
+  max-width: 250px;
+  border-top: 1px solid gray;
+  border-right: 1px solid gray;
 }

@@ -22,7 +22,7 @@ if ( process.defaultApp || /[\\/]electron-prebuilt[\\/]/.test(process.execPath) 
 function createWindow() {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 1024, height: 768, show: false
+    width:1600, height:1200, minWidth: 850, minHeight: 650, show: false
   });
 
   // and load the index.html of the app.
@@ -31,7 +31,7 @@ function createWindow() {
     indexPath = url.format({
       protocol: 'http:',
       host: 'localhost:4000',
-      pathname: 'index.html',
+      pathname: '/',
       slashes: true
     });
   } else {

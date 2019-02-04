@@ -5,9 +5,9 @@ const ipcRenderer = electron.ipcRenderer;
 const { 
   CATCH_ON_MAIN,
   SEND_TO_RENDERER
-} = require('../../../utils/constants');
+} = require('../../utils/constants');
 
-class HelloWorld extends React.Component {
+class HomePage extends React.Component {
   constructor(props) {
     super (props);
 
@@ -35,13 +35,12 @@ class HelloWorld extends React.Component {
   render() {
     return (
       <div>
-        <h1>Hello, Electron!</h1>
-        <p>I hope you enjoy using basic-electron-react-boilerplate to start your dev off right!</p>
+        <h1>Home Page</h1>
         <button onClick={this.handleClick}>Please</button>
       </div>
     )
   }
+
 }
 
-
-export default HelloWorld;
+export default HomePage;
