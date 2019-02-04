@@ -22,9 +22,13 @@ const {
   CATCH_ON_MAIN,
   SEND_TO_RENDERER,
   GET_ALL_FILES,
-  RETURN_ALL_FILES
+  RETURN_ALL_FILES,
+  ADD_IMAGE
 } = require('./utils/constants');
 
+// App data path
+const appDataPath = app.getPath('userData');
+console.log(appDataPath)
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
@@ -110,9 +114,19 @@ ipcMain.on(CATCH_ON_MAIN, (event, args) => {
 
 // Get all records
 ipcMain.on(GET_ALL_FILES, (event) => {
-  let result = knex.select('fileName', 'description', 'dateAdded').from('files');
+  let result = knex.select('fileName', 'description', 'dateAdded', 'fileType').from('files');
   console.log(result);
   result.then(function(data) {
     mainWindow.send(RETURN_ALL_FILES, data);
   });
+})
+
+// Add an image to the app data folder
+ipcMain.on(ADD_IMAGE, (event, args) => {
+  const filePath = appDataPath+'\\storedFiles\\images\\'+args.fileName;
+  fs.createReadStream(args.filePath).pipe(fs.createWriteStream(filePath));
+  // fs.copyFile(args.filePath, appDataPath, (err) => {
+  //   if (err) throw err;
+  //   console.log('The file has been saved');
+  // })
 })
