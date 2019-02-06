@@ -5,5 +5,7 @@ module.exports = {
   RETURN_ALL_FILES: 'return-all-files',
   ADD_IMAGE: 'add-image',
   GET_APP_DATA_PATH: 'get-app-data-path',
-  RETURN_APP_DATA_PATH: 'return-app-data-path'
+  RETURN_APP_DATA_PATH: 'return-app-data-path',
+  GET_IMAGE_RECORDS: 'get-image-records',
+  RETURN_IMAGE_RECORDS: 'return-image-records'
 };

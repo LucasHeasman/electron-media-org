@@ -7,6 +7,7 @@ const url = require('url');
 
 // File system
 const fs = require('fs');
+const base64Img = require('base64-img');
 
 // Database
 let knex = require('knex') ({
@@ -25,7 +26,9 @@ const {
   RETURN_ALL_FILES,
   ADD_IMAGE,
   GET_APP_DATA_PATH,
-  RETURN_APP_DATA_PATH
+  RETURN_APP_DATA_PATH,
+  GET_IMAGE_RECORDS,
+  RETURN_IMAGE_RECORDS
 } = require('./utils/constants');
 
 // App data path
@@ -116,7 +119,6 @@ ipcMain.on(CATCH_ON_MAIN, (event, args) => {
 
 // Get the default and current file location
 ipcMain.on(GET_APP_DATA_PATH, (event) => {
-  console.log("Here 002");
   mainWindow.send(RETURN_APP_DATA_PATH, appDataPath);
 })
 
@@ -129,9 +131,26 @@ ipcMain.on(GET_ALL_FILES, (event) => {
   });
 })
 
+// Get all records from the files table where fileType is image
+ipcMain.on(GET_IMAGE_RECORDS, (event) => {
+  let result = knex.select('fileName', 'description', 'dateAdded').from('files').where('fileType', 'image')
+  result.then(function(data) {
+    let sendData;
+    if (data && data.length) {
+      sendData = data;
+      for (var i=0; i<sendData.length; i++) {
+        sendData[i].src  = base64Img.base64Sync(appDataPath + '\\storedFiles\\images\\' + sendData[i].fileName);
+        // sendData[i].src = imgSrc;
+        // console.log(imgSrc);
+      }
+    }
+    mainWindow.send(RETURN_IMAGE_RECORDS, sendData);
+  });
+})
+
 // Add an image to the app data folder
 ipcMain.on(ADD_IMAGE, (event, args) => {
-  const filePath = appDataPath+'\\storedFiles\\images\\'+args.fileName;
+  const filePath = appDataPath + '\\storedFiles\\images\\' + args.fileName;
   fs.createReadStream(args.filePath).pipe(fs.createWriteStream(filePath));
   // fs.copyFile(args.filePath, appDataPath, (err) => {
   //   if (err) throw err;

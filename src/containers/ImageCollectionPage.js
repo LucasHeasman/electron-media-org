@@ -1,22 +1,47 @@
 import React from 'react';
+const electron = window.require('electron');
+const ipcRenderer = electron.ipcRenderer;
 import { Container, Row, Col, Button, Modal, ModalBody, ModalFooter, ModalHeader, Form, FormGroup, Label, Input, FormText } from 'reactstrap';
+import Select from 'react-select';
+import Creatable from 'react-select/lib/Creatable';
 import SidebarComponent from '../components/SidebarComponent';
 import ImagesList from '../components/ImagesList';
+
+const {
+  GET_IMAGE_RECORDS,
+  RETURN_IMAGE_RECORDS
+} = require('../../utils/constants');
 
 class ImageCollectionPage extends React.Component {
   constructor(props) {
     super(props);
 
     this.state = {
+      imagesData: null,
       modal: false,
       fileName: null,
       filePath: null,
-      description: null
+      description: null,
+      collectionSelectedOption: null
     }
 
     this.toggle = this.toggle.bind(this);
     this.handleFileInput = this.handleFileInput.bind(this);
     this.handleDescriptionInput = this.handleDescriptionInput.bind(this);
+    // this.handleCollectionChange = this.handleCollectionChange.bind(this);
+    this.handleReturnImageRecords = this.handleReturnImageRecords.bind(this);
+  }
+
+  componentWillMount() {
+    ipcRenderer.send(GET_IMAGE_RECORDS);
+  }
+
+  componentDidMount() {
+    ipcRenderer.on(RETURN_IMAGE_RECORDS, this.handleReturnImageRecords);
+  }
+
+  componentWillUnmount() {
+    ipcRenderer.removeListener(RETURN_IMAGE_RECORDS, this.handleReturnImageRecords);
   }
 
   toggle() {
@@ -33,8 +58,19 @@ class ImageCollectionPage extends React.Component {
     console.log(e.target.value);
     this.setState({ description: e.target.value });
   }
+
+  // handleCollectionChange = (collectionSelectedOption) => {
+  //   this.setState({ collectionSelectedOption });
+  //   console.log(`Collection option selected:`, collectionSelectedOption);
+  // }
+
+  handleReturnImageRecords(event, data) {
+    console.log(data);
+    this.setState({ imagesData: data });
+  }
+
   render() {
-    const images = [{name: "Image1", file: "stuff", description: "This is an image of a castle", "date-added": "28/1/2019"}, {name: "Image2", file: "Other Stuff", description: "This is an image of a forest", "date-added": "27/1/2019"}];
+    const { collectionSelectedOption } = this.state;
 
     const topContent = (
       <div>Top Content</div>
@@ -47,7 +83,7 @@ class ImageCollectionPage extends React.Component {
     const mainContent = (
       <div>
         <h1>Image Page</h1>
-        <ImagesList images={images} />
+        <ImagesList images={this.state.imagesData} />
       </div>
     )
 
@@ -79,6 +115,17 @@ class ImageCollectionPage extends React.Component {
                     <Label for="descriptionArea" sm={3}>Description:</Label>
                     <Col sm={9}>
                       <Input type="textarea" name="text" id="descriptionArea" onChange={this.handleDescriptionInput} />
+                    </Col>
+                  </FormGroup>
+                </Col>
+                <Col md={5}>
+                  <FormGroup row>
+                    <Label for="collectionInput" sm={3}>Collections:</Label>
+                    <Col sm={9}>
+                      {/* <Select
+                        value={collectionSelectedOption}
+                        onChange={this.handleCollectionChange}
+                      /> */}
                     </Col>
                   </FormGroup>
                 </Col>
