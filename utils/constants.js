@@ -3,5 +3,7 @@ module.exports = {
   SEND_TO_RENDERER: 'send-to-renderer',
   GET_ALL_FILES: 'get-all-files',
   RETURN_ALL_FILES: 'return-all-files',
-  ADD_IMAGE: 'add-image'
+  ADD_IMAGE: 'add-image',
+  GET_APP_DATA_PATH: 'get-app-data-path',
+  RETURN_APP_DATA_PATH: 'return-app-data-path'
 };

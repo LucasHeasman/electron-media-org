@@ -23,7 +23,9 @@ const {
   SEND_TO_RENDERER,
   GET_ALL_FILES,
   RETURN_ALL_FILES,
-  ADD_IMAGE
+  ADD_IMAGE,
+  GET_APP_DATA_PATH,
+  RETURN_APP_DATA_PATH
 } = require('./utils/constants');
 
 // App data path
@@ -110,6 +112,12 @@ app.on('activate', () => {
 ipcMain.on(CATCH_ON_MAIN, (event, args) => {
   console.log('Here 001', args);
   mainWindow.send(SEND_TO_RENDERER, 'pong');
+})
+
+// Get the default and current file location
+ipcMain.on(GET_APP_DATA_PATH, (event) => {
+  console.log("Here 002");
+  mainWindow.send(RETURN_APP_DATA_PATH, appDataPath);
 })
 
 // Get all records

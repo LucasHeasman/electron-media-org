@@ -104,7 +104,7 @@ class SidebarComponent extends React.Component {
           <div className="toolbar">
             <ButtonGroup>
                 <Button className="toggleSidebar" onClick={this.sidebarToggle}>Toggle Sidebar</Button>
-                <Button className="toggleSidebar" onClick={this.props.addHandler}>Add</Button>
+                {this.props.addBtn}
               </ButtonGroup>
           </div>
           {this.props.mainContent}
