@@ -6,10 +6,15 @@ import Select from 'react-select';
 import Creatable from 'react-select/lib/Creatable';
 import SidebarComponent from '../components/SidebarComponent';
 import ImagesList from '../components/ImagesList';
+import CollectionsList from '../components/CollectionsList';
 
 const {
   GET_IMAGE_RECORDS,
-  RETURN_IMAGE_RECORDS
+  RETURN_IMAGE_RECORDS,
+  GET_IMAGE_COLLECTIONS,
+  RETURN_IMAGE_COLLECTIONS,
+  GET_IMAGE_TAGS,
+  RETURN_IMAGE_TAGS
 } = require('../../utils/constants');
 
 class ImageCollectionPage extends React.Component {
@@ -17,6 +22,9 @@ class ImageCollectionPage extends React.Component {
     super(props);
 
     this.state = {
+      currentCollection: null,
+      collections: null,
+      loading: true,
       imagesData: null,
       modal: false,
       fileName: null,
@@ -30,18 +38,28 @@ class ImageCollectionPage extends React.Component {
     this.handleDescriptionInput = this.handleDescriptionInput.bind(this);
     // this.handleCollectionChange = this.handleCollectionChange.bind(this);
     this.handleReturnImageRecords = this.handleReturnImageRecords.bind(this);
+    this.setCollection = this.setCollection.bind(this);
+    this.handleReturnCollections = this.handleReturnCollections.bind(this);
+    this.handleReturnTags = this.handleReturnTags.bind(this);
   }
 
   componentWillMount() {
-    ipcRenderer.send(GET_IMAGE_RECORDS);
+    this.setState({ loading: true });
+    ipcRenderer.send(GET_IMAGE_RECORDS, this.state.currentCollection);
+    ipcRenderer.send(GET_IMAGE_COLLECTIONS);
+    ipcRenderer.send(GET_IMAGE_TAGS);
   }
 
   componentDidMount() {
     ipcRenderer.on(RETURN_IMAGE_RECORDS, this.handleReturnImageRecords);
+    ipcRenderer.on(RETURN_IMAGE_COLLECTIONS, this.handleReturnCollections);
+    ipcRenderer.on(RETURN_IMAGE_TAGS, this.handleReturnTags);
   }
 
   componentWillUnmount() {
     ipcRenderer.removeListener(RETURN_IMAGE_RECORDS, this.handleReturnImageRecords);
+    ipcRenderer.removeListener(RETURN_IMAGE_COLLECTIONS, this.handleReturnCollections);
+    ipcRenderer.removeListener(RETURN_IMAGE_TAGS, this.handleReturnTags);
   }
 
   toggle() {
@@ -66,18 +84,43 @@ class ImageCollectionPage extends React.Component {
 
   handleReturnImageRecords(event, data) {
     console.log(data);
-    this.setState({ imagesData: data });
+    this.setState({ imagesData: data, loading: false });
+  }
+
+  handleReturnCollections(event, data) {
+    console.log(data);
+    this.setState({ collections: data, loading: false });
+  }
+
+  handleReturnTags(event, data) {
+    console.log(data);
+    let tags = null;
+    if (data && data.length) {
+
+    }
+    this.setState({ tags: data });
+  }
+  
+  setCollection(e) {
+    // console.log(e.target.value);
+    if (!this.state.loading) {
+      ipcRenderer.send(GET_IMAGE_RECORDS, {currentCollection: e.target.value});
+      this.setState({ currentCollection: e.target.value, loading: true });
+    }
   }
 
   render() {
+    console.log(this.state.loading)
     const { collectionSelectedOption } = this.state;
 
     const topContent = (
-      <div>Top Content</div>
+      <CollectionsList collections={this.state.collections} setCollection={this.setCollection} collectionsLoading={this.state.loading} />
     )
 
     const botContent = (
-      <div>Bot Content</div>
+      <div>
+        <Select></Select>
+      </div>
     )
 
     const mainContent = (

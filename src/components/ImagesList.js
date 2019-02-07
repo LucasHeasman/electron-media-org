@@ -12,7 +12,7 @@ class ImagesList extends React.Component {
           imageDescription += '...';
         }
         return (
-          <Col xs="3">
+          <Col xs="3" key={object.fileName}>
             <Card className="imageCard">
               <CardImg top src={object.src} alt="Image" />
               <CardBody>

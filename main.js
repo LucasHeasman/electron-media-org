@@ -28,7 +28,11 @@ const {
   GET_APP_DATA_PATH,
   RETURN_APP_DATA_PATH,
   GET_IMAGE_RECORDS,
-  RETURN_IMAGE_RECORDS
+  RETURN_IMAGE_RECORDS,
+  GET_IMAGE_COLLECTIONS,
+  RETURN_IMAGE_COLLECTIONS,
+  GET_IMAGE_TAGS,
+  RETURN_IMAGE_TAGS
 } = require('./utils/constants');
 
 // App data path
@@ -132,9 +136,28 @@ ipcMain.on(GET_ALL_FILES, (event) => {
 })
 
 // Get all records from the files table where fileType is image
-ipcMain.on(GET_IMAGE_RECORDS, (event) => {
-  let result = knex.select('fileName', 'description', 'dateAdded').from('files').where('fileType', 'image')
+ipcMain.on(GET_IMAGE_RECORDS, (event, args) => {
+  let params = {
+    filetype: 'image'
+  }
+  let result = null;
+  if (args && args.currentCollection) {
+    params.collectionName = args.currentCollection;
+    result = knex.select()
+      .from('files')
+      .join('files_collections', {'files_collections.fileId': 'files.fileId'})
+      .join('collections', {'files_collections.collectionId': 'collections.collectionId'})
+      .join('files_tags', {'files_tags.fileId': 'files.fileId'})
+      .join('tags', {'files_tags.tagId': 'tags.tagId'})
+      .where(params)
+      .groupBy('files.fileName');
+  } else {
+    result = knex.select()
+      .from('files')
+      .where(params);
+  }
   result.then(function(data) {
+    console.log(data);
     let sendData;
     if (data && data.length) {
       sendData = data;
@@ -145,6 +168,34 @@ ipcMain.on(GET_IMAGE_RECORDS, (event) => {
       }
     }
     mainWindow.send(RETURN_IMAGE_RECORDS, sendData);
+  });
+})
+
+// Get all Collections with a sum of how many files are in them
+ipcMain.on(GET_IMAGE_COLLECTIONS, (event) => {
+  let result = knex('files_collections')
+    .select('collections.collectionName')
+    .count('fileId as totalFiles')
+    .join('collections', {'collections.collectionId' : 'files_collections.collectionId'})
+    .where('collections.collectionType', 'image')
+    .groupBy('collections.collectionId');
+  result.then(function(collections) {
+    console.log(collections);
+    mainWindow.send(RETURN_IMAGE_COLLECTIONS, collections);
+  });
+})
+
+// Get all tags
+ipcMain.on(GET_IMAGE_TAGS, (event) => {
+  let result = knex('files_tags')
+    .select('tags.tag')
+    .count('fileId as totalFiles')
+    .join('tags', {'tags.tagId': 'files_tags.tagId'})
+    .where('tags.tagType', 'image')
+    .groupBy('tags.tagId');
+  result.then(function(tags) {
+    console.log(tags);
+    mainWindow.send(RETURN_IMAGE_TAGS, tags);
   });
 })
 

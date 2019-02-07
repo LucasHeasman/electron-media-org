@@ -7,5 +7,9 @@ module.exports = {
   GET_APP_DATA_PATH: 'get-app-data-path',
   RETURN_APP_DATA_PATH: 'return-app-data-path',
   GET_IMAGE_RECORDS: 'get-image-records',
-  RETURN_IMAGE_RECORDS: 'return-image-records'
+  RETURN_IMAGE_RECORDS: 'return-image-records',
+  GET_IMAGE_COLLECTIONS: 'get-image-collections',
+  RETURN_IMAGE_COLLECTIONS: 'return-image-collections',
+  GET_IMAGE_TAGS: 'get-image-tags',
+  RETURN_IMAGE_TAGS: 'return-image-tags'
 };
