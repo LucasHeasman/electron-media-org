@@ -27,6 +27,7 @@ class CollectionsList extends React.Component {
 
     return (
       <Container fluid={true}>
+        <Button color="secondary" outline onClick={this.props.clearCollection}>All Images <Badge color="secondary">{this.props.totalFiles}</Badge></Button>
         {buttons}
       </Container>
     )

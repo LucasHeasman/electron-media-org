@@ -24,15 +24,15 @@ const {
   SEND_TO_RENDERER,
   GET_ALL_FILES,
   RETURN_ALL_FILES,
-  ADD_IMAGE,
+  ADD_FILE,
   GET_APP_DATA_PATH,
   RETURN_APP_DATA_PATH,
-  GET_IMAGE_RECORDS,
-  RETURN_IMAGE_RECORDS,
-  GET_IMAGE_COLLECTIONS,
-  RETURN_IMAGE_COLLECTIONS,
-  GET_IMAGE_TAGS,
-  RETURN_IMAGE_TAGS
+  GET_FILE_RECORDS,
+  RETURN_FILE_RECORDS,
+  GET_FILE_COLLECTIONS,
+  RETURN_FILE_COLLECTIONS,
+  GET_FILE_TAGS,
+  RETURN_FILE_TAGS
 } = require('./utils/constants');
 
 // App data path
@@ -136,12 +136,30 @@ ipcMain.on(GET_ALL_FILES, (event) => {
 })
 
 // Get all records from the files table where fileType is image
-ipcMain.on(GET_IMAGE_RECORDS, (event, args) => {
+ipcMain.on(GET_FILE_RECORDS, (event, args) => {
+  console.log(args);
   let params = {
-    filetype: 'image'
+    fileType: args.fileType,
+  }
+  let tags = [];
+  if (args.currentTags) {
+    for (var i=0; i < args.currentTags.length; i++) {
+      tags.push(args.currentTags[i].value);
+    }
   }
   let result = null;
-  if (args && args.currentCollection) {
+  if (args && args.currentCollection && args.currentTags && args.currentTags.length) {
+    params.collectionName = args.currentCollection;
+    result = knex.select()
+      .from('files')
+      .join('files_collections', {'files_collections.fileId': 'files.fileId'})
+      .join('collections', {'files_collections.collectionId': 'collections.collectionId'})
+      .join('files_tags', {'files_tags.fileId': 'files.fileId'})
+      .join('tags', {'files_tags.tagId': 'tags.tagId'})
+      .whereIn('tags.tag', tags)
+      .andWhere(params)
+      .groupBy('files.fileName');
+  } else if (args && args.currentCollection) {
     params.collectionName = args.currentCollection;
     result = knex.select()
       .from('files')
@@ -150,6 +168,14 @@ ipcMain.on(GET_IMAGE_RECORDS, (event, args) => {
       .join('files_tags', {'files_tags.fileId': 'files.fileId'})
       .join('tags', {'files_tags.tagId': 'tags.tagId'})
       .where(params)
+      .groupBy('files.fileName');
+  } else if(args && args.currentTags && args.currentTags.length) {
+    result = knex.select()
+      .from('files')
+      .join('files_tags', {'files_tags.fileId': 'files.fileId'})
+      .join('tags', {'files_tags.tagId': 'tags.tagId'})
+      .whereIn('tags.tag', tags)
+      .andWhere(params)
       .groupBy('files.fileName');
   } else {
     result = knex.select()
@@ -167,42 +193,77 @@ ipcMain.on(GET_IMAGE_RECORDS, (event, args) => {
         // console.log(imgSrc);
       }
     }
-    mainWindow.send(RETURN_IMAGE_RECORDS, sendData);
+    mainWindow.send(RETURN_FILE_RECORDS, sendData);
   });
 })
 
 // Get all Collections with a sum of how many files are in them
-ipcMain.on(GET_IMAGE_COLLECTIONS, (event) => {
+ipcMain.on(GET_FILE_COLLECTIONS, (event, args) => {
   let result = knex('files_collections')
-    .select('collections.collectionName')
+    .select('collections.collectionName', 'collections.collectionName as value', 'collections.collectionName as label')
     .count('fileId as totalFiles')
     .join('collections', {'collections.collectionId' : 'files_collections.collectionId'})
-    .where('collections.collectionType', 'image')
+    .where('collections.collectionType', args.fileType)
     .groupBy('collections.collectionId');
   result.then(function(collections) {
     console.log(collections);
-    mainWindow.send(RETURN_IMAGE_COLLECTIONS, collections);
+    mainWindow.send(RETURN_FILE_COLLECTIONS, collections);
   });
 })
 
 // Get all tags
-ipcMain.on(GET_IMAGE_TAGS, (event) => {
+ipcMain.on(GET_FILE_TAGS, (event, args) => {
   let result = knex('files_tags')
-    .select('tags.tag')
-    .count('fileId as totalFiles')
+    .select('tags.tag as value', 'tags.tag as label')
     .join('tags', {'tags.tagId': 'files_tags.tagId'})
-    .where('tags.tagType', 'image')
+    .where('tags.tagType', args.fileType)
     .groupBy('tags.tagId');
   result.then(function(tags) {
     console.log(tags);
-    mainWindow.send(RETURN_IMAGE_TAGS, tags);
+    mainWindow.send(RETURN_FILE_TAGS, tags);
   });
 })
 
 // Add an image to the app data folder
-ipcMain.on(ADD_IMAGE, (event, args) => {
-  const filePath = appDataPath + '\\storedFiles\\images\\' + args.fileName;
-  fs.createReadStream(args.filePath).pipe(fs.createWriteStream(filePath));
+ipcMain.on(ADD_FILE, (event, args) => {
+  console.log(args);
+  const date = new Date(Date.now()).toLocaleString('en-GB').split(',')[0];
+  let collectionIds = [];
+  
+  function collections() {
+    for (var i=0; i < args.collections.length; i++) {
+      if (args.collections[i].__isNew__) {
+        let collectionResult = knex('collections')
+          .insert([{collectionName: args.collections[i].value, collectionType: args.fileType}]);
+        collectionResult.then(function(newCollectionId) {
+          console.log('NEW: ' + newCollectionId);
+          collectionIds.push(newCollectionId);
+        })
+      } else {
+        let collectionResult = knex('collections')
+          .select('collectionId')
+          .where('collectionName', args.collections[i].value);
+        collectionResult.then(function(collection) {
+          console.log('OLD: ' + collection.collectionId);
+          collectionIds.push(collectionId);
+        })
+      }
+    }
+  }
+
+  // Add record to the files table
+  let filesResult = knex('files')
+    .insert([{fileName: args.fileName, description: args.description, dateAdded: date, fileType: args.fileType}]);
+  filesResult.then(function(data) {
+    console.log(data);
+    if (args.collections && args.collections.length) {
+      collections();
+      console.log('IDs: ' + collectionIds);
+    }
+  })
+  // const filePath = appDataPath + '\\storedFiles\\images\\' + args.fileName;
+  // fs.createReadStream(args.filePath).pipe(fs.createWriteStream(filePath));
+
   // fs.copyFile(args.filePath, appDataPath, (err) => {
   //   if (err) throw err;
   //   console.log('The file has been saved');
