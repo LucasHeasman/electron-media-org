@@ -25,14 +25,21 @@ const {
   GET_ALL_FILES,
   RETURN_ALL_FILES,
   ADD_FILE,
+  RETURN_FILE,
   GET_APP_DATA_PATH,
   RETURN_APP_DATA_PATH,
   GET_FILE_RECORDS,
   RETURN_FILE_RECORDS,
+  GET_ALL_COLLECTIONS,
+  RETURN_ALL_COLLECTIONS,
+  GET_ALL_TAGS,
+  RETURN_ALL_TAGS,
   GET_FILE_COLLECTIONS,
   RETURN_FILE_COLLECTIONS,
   GET_FILE_TAGS,
-  RETURN_FILE_TAGS
+  RETURN_FILE_TAGS,
+  UPDATE_FILE,
+  RETURN_FILE_UPDATED
 } = require('./utils/constants');
 
 // App data path
@@ -129,7 +136,7 @@ ipcMain.on(GET_APP_DATA_PATH, (event) => {
 // Get all records
 ipcMain.on(GET_ALL_FILES, (event) => {
   let result = knex.select('fileName', 'description', 'dateAdded', 'fileType').from('files');
-  console.log(result);
+  // console.log(result);
   result.then(function(data) {
     mainWindow.send(RETURN_ALL_FILES, data);
   });
@@ -137,7 +144,7 @@ ipcMain.on(GET_ALL_FILES, (event) => {
 
 // Get all records from the files table where fileType is image
 ipcMain.on(GET_FILE_RECORDS, (event, args) => {
-  console.log(args);
+  // console.log(args);
   let params = {
     fileType: args.fileType,
   }
@@ -183,7 +190,7 @@ ipcMain.on(GET_FILE_RECORDS, (event, args) => {
       .where(params);
   }
   result.then(function(data) {
-    console.log(data);
+    // console.log(data);
     let sendData;
     if (data && data.length) {
       sendData = data;
@@ -198,25 +205,55 @@ ipcMain.on(GET_FILE_RECORDS, (event, args) => {
 })
 
 // Get all Collections with a sum of how many files are in them
-ipcMain.on(GET_FILE_COLLECTIONS, (event, args) => {
+ipcMain.on(GET_ALL_COLLECTIONS, (event, args) => {
   let result = knex('files_collections')
-    .select('collections.collectionName', 'collections.collectionName as value', 'collections.collectionName as label')
+    .select('collections.collectionId', 'collections.collectionName', 'collections.collectionName as value', 'collections.collectionName as label')
     .count('fileId as totalFiles')
     .join('collections', {'collections.collectionId' : 'files_collections.collectionId'})
     .where('collections.collectionType', args.fileType)
     .groupBy('collections.collectionId');
   result.then(function(collections) {
-    console.log(collections);
-    mainWindow.send(RETURN_FILE_COLLECTIONS, collections);
+    // console.log(collections);
+    mainWindow.send(RETURN_ALL_COLLECTIONS, collections);
   });
 })
 
 // Get all tags
-ipcMain.on(GET_FILE_TAGS, (event, args) => {
+ipcMain.on(GET_ALL_TAGS, (event, args) => {
   let result = knex('files_tags')
     .select('tags.tag as value', 'tags.tag as label')
     .join('tags', {'tags.tagId': 'files_tags.tagId'})
     .where('tags.tagType', args.fileType)
+    .groupBy('tags.tagId');
+  result.then(function(tags) {
+    // console.log(tags);
+    mainWindow.send(RETURN_ALL_TAGS, tags);
+  });
+})
+
+// Get all Collections that a file is assigned to
+ipcMain.on(GET_FILE_COLLECTIONS, (event, args) => {
+  let result = knex('files_collections')
+    .select('collections.collectionId', 'collections.collectionName', 'collections.collectionName as value', 'collections.collectionName as label')
+    .count('fileId as totalFiles')
+    .join('collections', {'collections.collectionId' : 'files_collections.collectionId'})
+    .where('collections.collectionType', args.fileType)
+    .andWhere('files_collections.fileId', args.fileId)
+    .groupBy('collections.collectionId');
+  result.then(function(collections) {
+    // console.log(collections);
+    mainWindow.send(RETURN_FILE_COLLECTIONS, collections);
+  });
+})
+
+// Get all tags that are assigned to a file
+ipcMain.on(GET_FILE_TAGS, (event, args) => {
+  console.log(args);
+  let result = knex('files_tags')
+    .select('tags.tag as value', 'tags.tag as label')
+    .join('tags', {'tags.tagId': 'files_tags.tagId'})
+    .where('tags.tagType', args.fileType)
+    .andWhere('files_tags.fileId', args.fileId)
     .groupBy('tags.tagId');
   result.then(function(tags) {
     console.log(tags);
@@ -226,46 +263,279 @@ ipcMain.on(GET_FILE_TAGS, (event, args) => {
 
 // Add an image to the app data folder
 ipcMain.on(ADD_FILE, (event, args) => {
-  console.log(args);
+  // console.log(args);
+  const filePath = appDataPath + '\\storedFiles\\images\\' + args.fileName;
   const date = new Date(Date.now()).toLocaleString('en-GB').split(',')[0];
-  let collectionIds = [];
-  
-  function collections() {
-    for (var i=0; i < args.collections.length; i++) {
-      if (args.collections[i].__isNew__) {
-        let collectionResult = knex('collections')
-          .insert([{collectionName: args.collections[i].value, collectionType: args.fileType}]);
-        collectionResult.then(function(newCollectionId) {
-          console.log('NEW: ' + newCollectionId);
-          collectionIds.push(newCollectionId);
-        })
-      } else {
-        let collectionResult = knex('collections')
-          .select('collectionId')
-          .where('collectionName', args.collections[i].value);
-        collectionResult.then(function(collection) {
-          console.log('OLD: ' + collection.collectionId);
-          collectionIds.push(collectionId);
-        })
-      }
-    }
+
+  try {
+    fs.createReadStream(args.filePath).pipe(fs.createWriteStream(filePath));
+  } catch (error) {
+    alert('Error copying file ' + error);
   }
 
   // Add record to the files table
-  let filesResult = knex('files')
-    .insert([{fileName: args.fileName, description: args.description, dateAdded: date, fileType: args.fileType}]);
-  filesResult.then(function(data) {
-    console.log(data);
-    if (args.collections && args.collections.length) {
-      collections();
-      console.log('IDs: ' + collectionIds);
-    }
-  })
-  // const filePath = appDataPath + '\\storedFiles\\images\\' + args.fileName;
-  // fs.createReadStream(args.filePath).pipe(fs.createWriteStream(filePath));
+  let filePromise = new Promise(function(resolve, reject) {
+    let fileResult = knex('files')
+      .insert([{fileName: args.fileName, description: args.description, dateAdded: date, fileType: args.fileType}]);
+    fileResult.then(function(id) {
+      resolve({fileId: id});
+    })
+  });
 
-  // fs.copyFile(args.filePath, appDataPath, (err) => {
-  //   if (err) throw err;
-  //   console.log('The file has been saved');
-  // })
+  // Add any new collections to the collections table
+  let newCollectionPromise = new Promise(function(resolve, reject) {
+    if (args.newCollections && args.newCollections.length) {
+      let collectionResult = knex('collections')
+        .insert(args.newCollections);
+      collectionResult.then(function(id) {
+        resolve({newCollections: id});
+      });
+    } else {
+      resolve({newCollections: null});
+    }
+  });
+
+  // Add any new tags to the tags table
+  let newTagPromise = new Promise(function(resolve, reject) {
+    if (args.newTags && args.newTags.length) {
+      let tagResult = knex('tags')
+        .insert(args.newTags);
+      tagResult.then(function(id) {
+        resolve({newTags: id});
+      });
+    } else {
+      resolve({newTags: null});
+    }
+  });
+
+  // Once all promises finish
+  Promise.all([filePromise, newCollectionPromise, newTagPromise]).then(function(values) {
+    console.log(values);
+
+    // Get the IDs of the previously created collections
+    let oldCollectionPromise = new Promise(function(resolve, reject) {
+      if (args.oldCollections && args.oldCollections.length) {
+        let collectionResult = knex('collections')
+          .select('collectionId')
+          .whereIn('collectionName', args.oldCollections);
+        collectionResult.then(function(id) {
+          resolve(id);
+        });
+      } else {
+        resolve(null);
+      }
+    });
+
+    // Get the IDs of the previously created tags
+    let oldTagPromise = new Promise(function(resolve, reject) {
+      if (args.oldTags && args.oldTags.length) {
+        let tagResult = knex('tags')
+          .select('tagId')
+          .whereIn('tag', args.oldTags);
+        tagResult.then(function(id) {
+          resolve(id);
+        });
+      } else {
+        resolve(null);
+      }
+    });
+
+    Promise.all([oldCollectionPromise, oldTagPromise]).then(function(values2) {
+      console.log(values2);
+      let collectionIds = values2[0];
+      let tagIds = values2[1];
+      if (collectionIds && collectionIds.length) {
+        for (var i=0; i < collectionIds.length; i++) {
+          collectionIds[i].fileId = values[0].fileId[0];
+        }
+      }
+      if (tagIds && tagIds.length) {
+        for (var i=0; i < tagIds.length; i++) {
+          tagIds[i].fileId = values[0].fileId[0];
+        }
+      }
+      // console.log(collectionIds);
+      // console.log(tagIds);
+
+      // Add records to link the collections to the file
+      let fileCollectionPromise = new Promise(function(resolve, reject) {
+        if (collectionIds && collectionIds.length) {
+          let fileCollectionResult = knex('files_collections')
+            .insert(collectionIds);
+          fileCollectionResult.then(function(data) {
+            resolve(data);
+          });
+        } else {
+          resolve(null);
+        }
+      });
+
+       // Add records to link the tags to the file
+      let fileTagPromise = new Promise(function(resolve, reject) {
+        if (collectionIds && collectionIds.length) {
+          let fileCollectionResult = knex('files_tags')
+            .insert(tagIds);
+          fileCollectionResult.then(function(data) {
+            resolve(data);
+          });
+        } else {
+          resolve(null);
+        }
+      });
+
+      Promise.all([fileCollectionPromise, fileTagPromise]).then(function(values3) {
+        mainWindow.send(RETURN_FILE);
+      });
+    });
+  });
+})
+
+ipcMain.on(UPDATE_FILE, (event, args) => {
+  console.log(args);
+
+  // Add any new collections to the collections table
+  let newCollectionPromise = new Promise(function(resolve, reject) {
+    if (args.newCollections && args.newCollections.length) {
+      let collectionResult = knex('collections')
+        .insert(args.newCollections);
+      collectionResult.then(function(id) {
+        resolve({newCollections: id});
+      });
+    } else {
+      resolve({newCollections: null});
+    }
+  });
+
+  // Add any new tags to the tags table
+  let newTagPromise = new Promise(function(resolve, reject) {
+    if (args.newTags && args.newTags.length) {
+      let tagResult = knex('tags')
+        .insert(args.newTags);
+      tagResult.then(function(id) {
+        resolve({newTags: id});
+      });
+    } else {
+      resolve({newTags: null});
+    }
+  });
+
+  // Once all promises finish
+  Promise.all([newCollectionPromise, newTagPromise]).then(function(values) {
+    console.log("Values");
+    console.log(values);
+
+    // Remove the file from all collections
+    let removeCollectionsPromise = new Promise(function(resolve, reject) {
+      let removeCollectionResult = Knex('files_collections')
+        .where('files_collections.fileId', args.fileId)
+        .del()
+      removeCollectionResult.then(function(count) {
+        console.log(count);
+        resolve(count);
+      });
+    });
+    console.log("after remove collections");
+    // Remove all tags from the file
+    let removeTagsPromise = new Promise(function(resolve, reject) {
+      let removeTagResult = Knex('files_tags')
+        .where('files_tags.fileId', args.fileId)
+        .del()
+      removeTagResult.then(function(count) {
+        console.log(count);
+        resolve(count);
+      });
+    });
+    console.log("after remove tags");
+    // Once all promises finish
+    Promise.all([removeCollectionsPromise, removeTagsPromise]).then(function(values2) {
+      console.log("Values2");
+      console.log(values2);
+
+      // Get the IDs of the previously created collections
+      let oldCollectionPromise = new Promise(function(resolve, reject) {
+        if (args.oldCollections && args.oldCollections.length) {
+          let collectionIdResult = knex('collections')
+            .select('collectionId')
+            .whereIn('collectionName', args.oldCollections);
+          collectionIdResult.then(function(id) {
+            resolve(id);
+          });
+        } else {
+          resolve(null);
+        }
+      });
+
+      // Get the IDs of the previously created tags
+      let oldTagPromise = new Promise(function(resolve, reject) {
+        if (args.oldTags && args.oldTags.length) {
+          let tagIdResult = knex('tags')
+            .select('tagId')
+            .whereIn('tag', args.oldTags);
+          tagIdResult.then(function(id) {
+            resolve(id);
+          });
+        } else {
+          resolve(null);
+        }
+      });
+
+      Promise.all([oldCollectionPromise, oldTagPromise]).then(function(values3) {
+        console.log("Values3");
+        console.log(values3);
+        let collectionIds = values3[0];
+        let tagIds = values3[1];
+        if (collectionIds && collectionIds.length) {
+          for (var i=0; i < collectionIds.length; i++) {
+            collectionIds[i].fileId = args.fileId;
+          }
+        }
+        if (tagIds && tagIds.length) {
+          for (var i=0; i < tagIds.length; i++) {
+            tagIds[i].fileId = args.fileId;
+          }
+        }
+        // console.log(collectionIds);
+        // console.log(tagIds);
+  
+        // Add records to link the collections to the file
+        let fileCollectionPromise = new Promise(function(resolve, reject) {
+          if (collectionIds && collectionIds.length) {
+            let fileCollectionResult = knex('files_collections')
+              .insert(collectionIds);
+            fileCollectionResult.then(function(data) {
+              resolve(data);
+            });
+          } else {
+            resolve(null);
+          }
+        });
+  
+         // Add records to link the tags to the file
+        let fileTagPromise = new Promise(function(resolve, reject) {
+          if (collectionIds && collectionIds.length) {
+            let fileCollectionResult = knex('files_tags')
+              .insert(tagIds);
+            fileCollectionResult.then(function(data) {
+              resolve(data);
+            });
+          } else {
+            resolve(null);
+          }
+        });
+
+        Promise.all([fileCollectionPromise, fileTagPromise]).then(function(values4) {
+          console.log("Values4");
+          mainWindow.send(RETURN_FILE_UPDATED);
+        }).catch(function(err) {
+          console.log('error creating new collection/tag links ' + err);
+        });
+      }).catch(function(err) {
+        console.log('error getting correct collection/tag IDs ' + err);
+      });
+    }).catch(function(err) {
+      console.log('error removing old collections/tags ' + err);
+    });
+  }).catch(function(err) {
+    console.log('error creating new collections/tags ' + err);
+  });
 })

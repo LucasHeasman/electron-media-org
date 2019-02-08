@@ -50,3 +50,8 @@
 .imageCard {
   height: 100%;
 }
+
+.viewImage {
+  height: auto;
+  width: 100%;
+}

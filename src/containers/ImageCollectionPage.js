@@ -11,11 +11,12 @@ import CollectionsList from '../components/CollectionsList';
 const {
   GET_FILE_RECORDS,
   RETURN_FILE_RECORDS,
-  GET_FILE_COLLECTIONS,
-  RETURN_FILE_COLLECTIONS,
-  GET_FILE_TAGS,
-  RETURN_FILE_TAGS,
-  ADD_FILE
+  GET_ALL_COLLECTIONS,
+  RETURN_ALL_COLLECTIONS,
+  GET_ALL_TAGS,
+  RETURN_ALL_TAGS,
+  ADD_FILE,
+  RETURN_FILE
 } = require('../../utils/constants');
 
 class ImageCollectionPage extends React.Component {
@@ -32,18 +33,19 @@ class ImageCollectionPage extends React.Component {
       allImagesData: null,
       imagesData: null,
       modal: false,
+      viewModal: false,
       fileName: null,
       filePath: null,
       description: null,
       addCollectionSelectedOption: null,
       addTagSelected: null,
-      tagSelectedOption: null
+      tagSelectedOption: null,
+      viewImageSrc: null
     }
 
     this.toggle = this.toggle.bind(this);
     this.handleFileInput = this.handleFileInput.bind(this);
     this.handleDescriptionInput = this.handleDescriptionInput.bind(this);
-    // this.handleCollectionChange = this.handleCollectionChange.bind(this);
     this.handleReturnImageRecords = this.handleReturnImageRecords.bind(this);
     this.setCollection = this.setCollection.bind(this);
     this.handleReturnCollections = this.handleReturnCollections.bind(this);
@@ -53,25 +55,28 @@ class ImageCollectionPage extends React.Component {
     this.handleCollectionChange = this.handleCollectionChange.bind(this);
     this.handleAddTagChange = this.handleAddTagChange.bind(this);
     this.submitNewImage = this.submitNewImage.bind(this);
+    this.handleReturnFile = this.handleReturnFile.bind(this);
   }
 
   componentWillMount() {
     this.setState({ loading: true });
     ipcRenderer.send(GET_FILE_RECORDS, {fileType: this.state.fileType, currentCollection: this.state.currentCollection, currentTags: this.state.tagSelectedOption});
-    ipcRenderer.send(GET_FILE_COLLECTIONS, {fileType: this.state.fileType});
-    ipcRenderer.send(GET_FILE_TAGS, {fileType: this.state.fileType});
+    ipcRenderer.send(GET_ALL_COLLECTIONS, {fileType: this.state.fileType});
+    ipcRenderer.send(GET_ALL_TAGS, {fileType: this.state.fileType});
   }
 
   componentDidMount() {
     ipcRenderer.on(RETURN_FILE_RECORDS, this.handleReturnImageRecords);
-    ipcRenderer.on(RETURN_FILE_COLLECTIONS, this.handleReturnCollections);
-    ipcRenderer.on(RETURN_FILE_TAGS, this.handleReturnTags);
+    ipcRenderer.on(RETURN_ALL_COLLECTIONS, this.handleReturnCollections);
+    ipcRenderer.on(RETURN_ALL_TAGS, this.handleReturnTags);
+    ipcRenderer.on(RETURN_FILE, this.handleReturnFile);
   }
 
   componentWillUnmount() {
     ipcRenderer.removeListener(RETURN_FILE_RECORDS, this.handleReturnImageRecords);
-    ipcRenderer.removeListener(RETURN_FILE_COLLECTIONS, this.handleReturnCollections);
-    ipcRenderer.removeListener(RETURN_FILE_TAGS, this.handleReturnTags);
+    ipcRenderer.removeListener(RETURN_ALL_COLLECTIONS, this.handleReturnCollections);
+    ipcRenderer.removeListener(RETURN_ALL_TAGS, this.handleReturnTags);
+    ipcRenderer.removeListener(RETURN_FILE, this.handleReturnFile);
   }
 
   toggle() {
@@ -162,8 +167,10 @@ class ImageCollectionPage extends React.Component {
           description: this.state.description,
           collections: this.state.addCollectionSelectedOption,
           newCollections: [],
+          oldCollections: [],
           tags: this.state.addTagSelected,
-          newTags: []
+          newTags: [],
+          oldTags: []
         }
         let oldCollections = [];
         let oldTags = [];
@@ -182,7 +189,10 @@ class ImageCollectionPage extends React.Component {
           for (var i=0; i < params.collections.length; i++) {
             const isOld = (oldCollections).includes(params.collections[i].value);
             if (!isOld) {
-              params.newCollections.push(params.collections[i].value);
+              params.newCollections.push({collectionName: params.collections[i].value, collectionType: params.fileType});
+              params.oldCollections.push(params.collections[i].value);
+            } else {
+              params.oldCollections.push(params.collections[i].value);
             }
           }
         }
@@ -190,18 +200,30 @@ class ImageCollectionPage extends React.Component {
           for (var i=0; i < params.tags.length; i++) {
             const isOld = (oldTags).includes(params.tags[i].value);
             if (!isOld) {
-              params.newTags.push(params.tags[i].value);
+              params.newTags.push({tag: params.tags[i].value, tagType: params.fileType});
+              params.oldTags.push(params.tags[i].value);
+            } else {
+              params.oldTags.push(params.tags[i].value);
             }
           }
         }
         console.log(params);
         ipcRenderer.send(ADD_FILE, params);
+        this.setState({ loading: true });
       } else {
         alert('There is already a file with that name');
       }
     } else {
       alert('No file set');
     }
+  }
+
+  handleReturnFile() {
+    console.log('handleReturnFile');
+    this.setState({ modal: false });
+    ipcRenderer.send(GET_FILE_RECORDS, {fileType: this.state.fileType, currentCollection: this.state.currentCollection, currentTags: this.state.tagSelectedOption});
+    ipcRenderer.send(GET_ALL_COLLECTIONS, {fileType: this.state.fileType});
+    ipcRenderer.send(GET_ALL_TAGS, {fileType: this.state.fileType});
   }
 
   render() {
@@ -222,7 +244,7 @@ class ImageCollectionPage extends React.Component {
       <div>
         <h1>Image Page</h1>
         <h3>{this.state.currentCollection || 'All Files'}</h3>
-        <ImagesList images={this.state.imagesData} />
+        <ImagesList images={this.state.imagesData} collections={this.state.collections} tags={this.state.tags} />
       </div>
     )
 

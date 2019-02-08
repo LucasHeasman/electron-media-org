@@ -4,12 +4,19 @@ module.exports = {
   GET_ALL_FILES: 'get-all-files',
   RETURN_ALL_FILES: 'return-all-files',
   ADD_FILE: 'add-file',
+  RETURN_FILE: 'return-file',
   GET_APP_DATA_PATH: 'get-app-data-path',
   RETURN_APP_DATA_PATH: 'return-app-data-path',
   GET_FILE_RECORDS: 'get-file-records',
   RETURN_FILE_RECORDS: 'return-file-records',
+  GET_ALL_COLLECTIONS: 'get-all-collections',
+  RETURN_ALL_COLLECTIONS: 'return-all-collections',
+  GET_ALL_TAGS: 'get-all-tags',
+  RETURN_ALL_TAGS: 'return-all-tags',
   GET_FILE_COLLECTIONS: 'get-file-collections',
   RETURN_FILE_COLLECTIONS: 'return-file-collections',
   GET_FILE_TAGS: 'get-file-tags',
-  RETURN_FILE_TAGS: 'return-file-tags'
+  RETURN_FILE_TAGS: 'return-file-tags',
+  UPDATE_FILE: 'update-file',
+  RETURN_FILE_UPDATED: 'return-file-updated'
 };
