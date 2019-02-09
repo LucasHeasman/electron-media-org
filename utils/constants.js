@@ -18,5 +18,9 @@ module.exports = {
   GET_FILE_TAGS: 'get-file-tags',
   RETURN_FILE_TAGS: 'return-file-tags',
   UPDATE_FILE: 'update-file',
-  RETURN_FILE_UPDATED: 'return-file-updated'
+  RETURN_FILE_UPDATED: 'return-file-updated',
+  DELETE_FILE: 'delete-file',
+  RETURN_FILE_DELETED: 'return-file-deleted',
+  STREAM_VIDEO: 'stream-video',
+  STOP_STREAM_VIDEO: 'stop-stream-video'
 };

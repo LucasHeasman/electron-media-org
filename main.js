@@ -2,6 +2,7 @@
 
 // Import parts of electron to use
 const {app, BrowserWindow, ipcMain} = require('electron');
+const http = require('http');
 const path = require('path');
 const url = require('url');
 
@@ -39,7 +40,11 @@ const {
   GET_FILE_TAGS,
   RETURN_FILE_TAGS,
   UPDATE_FILE,
-  RETURN_FILE_UPDATED
+  RETURN_FILE_UPDATED,
+  DELETE_FILE,
+  RETURN_FILE_DELETED,
+  STREAM_VIDEO,
+  STOP_STREAM_VIDEO
 } = require('./utils/constants');
 
 // App data path
@@ -195,7 +200,8 @@ ipcMain.on(GET_FILE_RECORDS, (event, args) => {
     if (data && data.length) {
       sendData = data;
       for (var i=0; i<sendData.length; i++) {
-        sendData[i].src  = base64Img.base64Sync(appDataPath + '\\storedFiles\\images\\' + sendData[i].fileName);
+        sendData[i].src  = base64Img.base64Sync(appDataPath + '\\storedFiles\\' + args.fileType + '\\' + sendData[i].fileName);
+        sendData[i].path = appDataPath + '\\storedFiles\\' + args.fileType + '\\' + sendData[i].fileName;
         // sendData[i].src = imgSrc;
         // console.log(imgSrc);
       }
@@ -206,27 +212,44 @@ ipcMain.on(GET_FILE_RECORDS, (event, args) => {
 
 // Get all Collections with a sum of how many files are in them
 ipcMain.on(GET_ALL_COLLECTIONS, (event, args) => {
-  let result = knex('files_collections')
-    .select('collections.collectionId', 'collections.collectionName', 'collections.collectionName as value', 'collections.collectionName as label')
-    .count('fileId as totalFiles')
-    .join('collections', {'collections.collectionId' : 'files_collections.collectionId'})
-    .where('collections.collectionType', args.fileType)
-    .groupBy('collections.collectionId');
-  result.then(function(collections) {
-    // console.log(collections);
-    mainWindow.send(RETURN_ALL_COLLECTIONS, collections);
+
+  // Get total files with the correct filetype
+  let totalFilesPromise = new Promise(function(resolve, reject) {
+    let totalFilesResult = knex('files')
+      .countDistinct('files.fileId as totalFiles')
+      .where('files.fileType', args.fileType);
+      totalFilesResult.then(function(count) {
+        resolve(count);
+      })
+  });
+
+  let collectionsPromise = new Promise(function(resolve, reject) {
+    let result = knex('collections')
+      .select('collections.collectionId', 'collections.collectionName', 'collections.collectionName as value', 'collections.collectionName as label')
+      .count('fileId as totalFiles')
+      .leftJoin('files_collections', {'files_collections.collectionId' : 'collections.collectionId' })
+      .where('collections.collectionType', args.fileType)
+      .groupBy('collections.collectionId');
+    result.then(function(collections) {
+      resolve(collections);
+    });
+  })
+
+  Promise.all([totalFilesPromise, collectionsPromise]).then(function(values) {
+    // console.log(values);
+    mainWindow.send(RETURN_ALL_COLLECTIONS, values);
   });
 })
 
 // Get all tags
 ipcMain.on(GET_ALL_TAGS, (event, args) => {
-  let result = knex('files_tags')
+  let result = knex('tags')
     .select('tags.tag as value', 'tags.tag as label')
-    .join('tags', {'tags.tagId': 'files_tags.tagId'})
+    .leftJoin('files_tags', {'files_tags.tagId' : 'tags.tagId' })
     .where('tags.tagType', args.fileType)
     .groupBy('tags.tagId');
   result.then(function(tags) {
-    // console.log(tags);
+    console.log(tags);
     mainWindow.send(RETURN_ALL_TAGS, tags);
   });
 })
@@ -264,7 +287,7 @@ ipcMain.on(GET_FILE_TAGS, (event, args) => {
 // Add an image to the app data folder
 ipcMain.on(ADD_FILE, (event, args) => {
   // console.log(args);
-  const filePath = appDataPath + '\\storedFiles\\images\\' + args.fileName;
+  const filePath = appDataPath + '\\storedFiles\\' + args.fileType + '\\' + args.fileName;
   const date = new Date(Date.now()).toLocaleString('en-GB').split(',')[0];
 
   try {
@@ -426,26 +449,34 @@ ipcMain.on(UPDATE_FILE, (event, args) => {
 
     // Remove the file from all collections
     let removeCollectionsPromise = new Promise(function(resolve, reject) {
-      let removeCollectionResult = Knex('files_collections')
-        .where('files_collections.fileId', args.fileId)
+      console.log(knex);
+      let removeCollectionResult = knex('files_collections')
         .del()
+        .where({'fileId': args.fileId})
       removeCollectionResult.then(function(count) {
-        console.log(count);
+        // console.log('remove collections');
+        // console.log(count);
         resolve(count);
+      }).catch(function(err) {
+        console.log('error removing collections ' + err);
       });
     });
-    console.log("after remove collections");
+
     // Remove all tags from the file
     let removeTagsPromise = new Promise(function(resolve, reject) {
-      let removeTagResult = Knex('files_tags')
-        .where('files_tags.fileId', args.fileId)
+      console.log(knex);
+      let removeTagResult = knex('files_tags')
         .del()
+        .where({'fileId': args.fileId})
       removeTagResult.then(function(count) {
-        console.log(count);
+        // console.log('remove tags');
+        // console.log(count);
         resolve(count);
+      }).catch(function(err) {
+        console.log('error removing tags ' + err);
       });
     });
-    console.log("after remove tags");
+
     // Once all promises finish
     Promise.all([removeCollectionsPromise, removeTagsPromise]).then(function(values2) {
       console.log("Values2");
@@ -523,7 +554,17 @@ ipcMain.on(UPDATE_FILE, (event, args) => {
           }
         });
 
-        Promise.all([fileCollectionPromise, fileTagPromise]).then(function(values4) {
+        //Update the description
+        let updateDescriptionPromise = new Promise(function(resolve, reject) {
+          let updateDescriptionResult = knex('files')
+            .where({'fileId': args.fileId})
+            .update({'description': args.description});
+          updateDescriptionResult.then(function(data) {
+            resolve(data);
+          });
+        });
+
+        Promise.all([fileCollectionPromise, fileTagPromise, updateDescriptionPromise]).then(function(values4) {
           console.log("Values4");
           mainWindow.send(RETURN_FILE_UPDATED);
         }).catch(function(err) {
@@ -538,4 +579,112 @@ ipcMain.on(UPDATE_FILE, (event, args) => {
   }).catch(function(err) {
     console.log('error creating new collections/tags ' + err);
   });
+})
+
+ipcMain.on(DELETE_FILE, (event, args) => {
+  console.log(args);
+
+  // Remove the file from all collections
+  let removeCollectionsPromise = new Promise(function(resolve, reject) {
+    console.log(knex);
+    let removeCollectionResult = knex('files_collections')
+      .del()
+      .where({'fileId': args.fileId})
+    removeCollectionResult.then(function(count) {
+      // console.log('remove collections');
+      // console.log(count);
+      resolve(count);
+    }).catch(function(err) {
+      console.log('error removing collections ' + err);
+    });
+  });
+
+  // Remove all tags from the file
+  let removeTagsPromise = new Promise(function(resolve, reject) {
+    console.log(knex);
+    let removeTagResult = knex('files_tags')
+      .del()
+      .where({'fileId': args.fileId})
+    removeTagResult.then(function(count) {
+      // console.log('remove tags');
+      // console.log(count);
+      resolve(count);
+    }).catch(function(err) {
+      console.log('error removing tags ' + err);
+    });
+  });
+
+  // Remove all tags from the file
+  let removeFilePromise = new Promise(function(resolve, reject) {
+    console.log(knex);
+    let removeFileResult = knex('files')
+      .del()
+      .where({'fileId': args.fileId})
+    removeFileResult.then(function(count) {
+      // console.log('remove tags');
+      // console.log(count);
+      resolve(count);
+    }).catch(function(err) {
+      console.log('error removing file ' + err);
+    });
+  });
+
+  Promise.all([removeCollectionsPromise, removeTagsPromise, removeFilePromise]).then(function() {
+    mainWindow.send(RETURN_FILE_DELETED);
+  }).catch(function(err) {
+    console.log('error creating new collection/tag links ' + err);
+  });
+})
+var server = null;
+ipcMain.on(STREAM_VIDEO, (event, args) => {
+  console.log(args);
+  if (args.fileName) {
+    server = http.createServer(function (req, res) {
+      const filePath = appDataPath + '\\storedFiles\\video\\' + args.fileName;
+      fs.stat(filePath, function(err, stats) {
+        if (err) {
+          if (err.code === 'ENOENT') {
+            // 404 Error if file not found
+            alert('404 File not found');
+            res.sendStatus(404);
+          }
+          res.end(err);
+        }
+        let range = req.headers.range;
+        if (!range) {
+          // 416 wrong range
+          alert('416 wrong range');
+          return res.sendStatus(416);
+        }
+        var positions = range.replace(/bytes=/, "").split("-");
+        var start = parseInt(positions[0], 10);
+        var total = stats.size;
+        var end = positions[1] ? parseInt(positions[1], 10) : total - 1;
+        var chunksize = (end - start) + 1;
+
+        res.writeHead(206, {
+          "Content-Range": "bytes " + start + "-" + end + "/" + total,
+          "Accept-Ranges": "bytes",
+          "Content-Length": chunksize,
+          "Content-Type": "video/mp4"
+        });
+
+        var stream = fs.createReadStream(filePath, { start: start, end: end, autoClose: true })
+          .on("open", function() {
+            stream.pipe(res);
+          })
+          .on("error", function(err) {
+            res.end(err);
+        });
+      })
+    }).listen(8888);
+  }
+})
+
+ipcMain.on(STOP_STREAM_VIDEO, (event) => {
+  if (server) {
+    server.close(function () {
+      console.log('Server closed');
+    });
+  }
 })

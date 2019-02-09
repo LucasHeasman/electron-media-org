@@ -17,6 +17,7 @@ class CollectionsList extends React.Component {
           return (
             <div key={object.collectionName}>
               <Button color="secondary" outline onClick={this.props.setCollection} value={object.collectionName}>{object.collectionName} <Badge color="secondary">{object.totalFiles}</Badge></Button>
+              <br />
             </div>
           )
         }
@@ -27,7 +28,11 @@ class CollectionsList extends React.Component {
 
     return (
       <Container fluid={true}>
-        <Button color="secondary" outline onClick={this.props.clearCollection}>All Images <Badge color="secondary">{this.props.totalFiles}</Badge></Button>
+        {(this.props.collectionsLoading) ?  
+          <Button color="secondary" disabled outline onClick={this.props.clearCollection}>All Images <Badge color="secondary">{this.props.totalFiles}</Badge></Button>
+        :
+          <Button color="secondary" outline onClick={this.props.clearCollection}>All Images <Badge color="secondary">{this.props.totalFiles}</Badge></Button>
+        }
         {buttons}
       </Container>
     )
