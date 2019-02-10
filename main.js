@@ -56,6 +56,21 @@ const {
 // App data path
 const appDataPath = app.getPath('userData');
 console.log(appDataPath)
+
+// Create folders if they don't exist
+var dir = appDataPath + '/storedFiles';
+dir.split('\\').join('/');
+
+if (!fs.existsSync(dir)) {
+  fs.mkdirSync(dir);
+}
+if (!fs.existsSync(dir + '/image')) {
+  fs.mkdirSync(dir + '/image');
+}
+if (!fs.existsSync(dir + '/video')) {
+  fs.mkdirSync(dir + '/video');
+}
+
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
@@ -94,9 +109,9 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     // Open the DevTools automatically if developing
-    if ( dev ) {
-      mainWindow.webContents.openDevTools();
-    }
+    // if ( dev ) {
+    //   mainWindow.webContents.openDevTools();
+    // }
   });
 
   // Emitted when the window is closed.
@@ -700,13 +715,25 @@ ipcMain.on(CLEAR_FILES, (event, args) => {
   switch (args) {
     case 'videos':
       let getVideoResult = knex('files')
-        .select('fileId')
+        .select('fileId', 'fileName')
         .where({'fileType': 'video'})
       getVideoResult.then(function(id) {
         if (id) {
           const videoIds = [];
+          const fileNames = [];
+          let filePath = appDataPath;
+          filePath = filePath.split('\\').join('/');
           for (var i = 0; i < id.length; i++) {
             videoIds.push(id[i].fileId);
+            fileNames.push(id[i].fileName);
+          }
+          if (fileNames && fileNames.length) {
+            for (var i = 0; i < fileNames.length; i++) {
+              fs.unlink( filePath + '/storedFiles/video/' + fileNames[i], (err) => {
+                if (err) throw err;
+                console.log(fileNames[i] + ' was deleted');
+              });
+            }
           }
           let removeFromCollectionsPromise = new Promise(function(resolve, reject) {
             let removeFromCollectionsResult = knex('files_collections')
@@ -754,8 +781,20 @@ ipcMain.on(CLEAR_FILES, (event, args) => {
         console.log(id);
         if (id) {
           const imageIds = [];
+          const fileNames = [];
+          let filePath = appDataPath;
+          filePath = filePath.split('\\').join('/');
           for (var i = 0; i < id.length; i++) {
             imageIds.push(id[i].fileId);
+            fileNames.push(id[i].fileName);
+          }
+          if (fileNames && fileNames.length) {
+            for (var i = 0; i < fileNames.length; i++) {
+              fs.unlink( filePath + '/storedFiles/video/' + fileNames[i], (err) => {
+                if (err) throw err;
+                console.log(fileNames[i] + ' was deleted');
+              });
+            }
           }
           let removeFromCollectionsPromise = new Promise(function(resolve, reject) {
             let removeFromCollectionsResult = knex('files_collections')
@@ -795,6 +834,29 @@ ipcMain.on(CLEAR_FILES, (event, args) => {
       });
       break;
     case 'all':
+      let filePath = appDataPath;
+      filePath = filePath.split('\\').join('/');
+
+      fs.readdir(filePath + '/storedFiles/image', (err, files) => {
+        if (err) throw err;
+
+        for (const file of files) {
+          fs.unlink(path.join(filePath + '/storedFiles/image', file), err => {
+            if (err) throw err;
+          });
+        }
+      });
+
+      fs.readdir(filePath + '/storedFiles/video', (err, files) => {
+        if (err) throw err;
+
+        for (const file of files) {
+          fs.unlink(path.join(filePath + '/storedFiles/video', file), err => {
+            if (err) throw err;
+          });
+        }
+      });
+
       let removeFromCollectionsPromise = new Promise(function(resolve, reject) {
         let removeFromCollectionsResult = knex('files_collections')
           .del()
