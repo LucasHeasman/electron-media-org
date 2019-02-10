@@ -3,6 +3,7 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const BabiliPlugin = require('babili-webpack-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
+const helpers = require('./config/helpers');
 
 // Config directories
 const SRC_DIR = path.resolve(__dirname, 'src');
@@ -22,11 +23,7 @@ module.exports = {
     rules: [
       {
         test: /\.css$/,
-        use: ExtractTextPlugin.extract({
-          fallback: 'style-loader',
-          use: 'css-loader'
-        }),
-        include: defaultInclude
+        use: ['style-loader', 'css-loader']
       },
       {
         test: /\.jsx?$/,
@@ -34,8 +31,8 @@ module.exports = {
         include: defaultInclude
       },
       {
-        test: /\.(jpe?g|png|gif)$/,
-        use: [{ loader: 'file-loader?name=img/[name]__[hash:base64:5].[ext]' }],
+        test: /\.(jpe?g|png|gif|PNG)(\?[a-z0-9=.]+)?$/,
+        use: [{ loader: 'url-loader?limit=100000' }],
         include: defaultInclude
       },
       {
@@ -47,7 +44,10 @@ module.exports = {
   },
   target: 'electron-renderer',
   plugins: [
-    new HtmlWebpackPlugin(),
+    new HtmlWebpackPlugin({
+      template: helpers.root('public/index.html'),
+      inject: 'body'
+    }),
     new ExtractTextPlugin('bundle.css'),
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify('production')

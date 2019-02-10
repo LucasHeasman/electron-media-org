@@ -103,6 +103,7 @@ function createWindow() {
       slashes: true
     });
   }
+  console.log(path.join(__dirname, 'dist', 'index.html'));
   mainWindow.loadURL( indexPath );
 
   // Don't show until we are ready and loaded

@@ -30,7 +30,7 @@ class App extends Component {
             <Route path="/images" component={ImageCollectionPage} />
             <Route path="/image" component={ImagePage} />
             <Route path="/settings" component={SettingsPage} />
-            <Route component={ErrorPage} />
+            <Route component={HomePage} />
           </Switch>
         </div>
       </BrowserRouter>
