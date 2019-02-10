@@ -44,7 +44,13 @@ const {
   DELETE_FILE,
   RETURN_FILE_DELETED,
   STREAM_VIDEO,
-  STOP_STREAM_VIDEO
+  STOP_STREAM_VIDEO,
+  CLEAR_FILES,
+  RETURN_FILES_CLEARED,
+  CLEAR_COLLECTIONS,
+  RETURN_COLLECTIONS_CLEARED,
+  CLEAR_TAGS,
+  RETURN_TAGS_CLEARED
 } = require('./utils/constants');
 
 // App data path
@@ -293,7 +299,7 @@ ipcMain.on(ADD_FILE, (event, args) => {
   try {
     fs.createReadStream(args.filePath).pipe(fs.createWriteStream(filePath));
   } catch (error) {
-    alert('Error copying file ' + error);
+    console.log('Error copying file ' + error);
   }
 
   // Add record to the files table
@@ -425,7 +431,7 @@ ipcMain.on(UPDATE_FILE, (event, args) => {
         resolve({newCollections: id});
       });
     } else {
-      resolve({newCollections: null});
+      resolve({newCollections: 0});
     }
   });
 
@@ -438,7 +444,7 @@ ipcMain.on(UPDATE_FILE, (event, args) => {
         resolve({newTags: id});
       });
     } else {
-      resolve({newTags: null});
+      resolve({newTags: 0});
     }
   });
 
@@ -543,7 +549,7 @@ ipcMain.on(UPDATE_FILE, (event, args) => {
   
          // Add records to link the tags to the file
         let fileTagPromise = new Promise(function(resolve, reject) {
-          if (collectionIds && collectionIds.length) {
+          if (tagIds && tagIds.length) {
             let fileCollectionResult = knex('files_tags')
               .insert(tagIds);
             fileCollectionResult.then(function(data) {
@@ -645,7 +651,7 @@ ipcMain.on(STREAM_VIDEO, (event, args) => {
         if (err) {
           if (err.code === 'ENOENT') {
             // 404 Error if file not found
-            alert('404 File not found');
+            console.log('404 File not found');
             res.sendStatus(404);
           }
           res.end(err);
@@ -653,7 +659,7 @@ ipcMain.on(STREAM_VIDEO, (event, args) => {
         let range = req.headers.range;
         if (!range) {
           // 416 wrong range
-          alert('416 wrong range');
+          console.log('416 wrong range');
           return res.sendStatus(416);
         }
         var positions = range.replace(/bytes=/, "").split("-");
@@ -686,5 +692,369 @@ ipcMain.on(STOP_STREAM_VIDEO, (event) => {
     server.close(function () {
       console.log('Server closed');
     });
+  }
+})
+
+ipcMain.on(CLEAR_FILES, (event, args) => {
+  console.log(args);
+  switch (args) {
+    case 'videos':
+      let getVideoResult = knex('files')
+        .select('fileId')
+        .where({'fileType': 'video'})
+      getVideoResult.then(function(id) {
+        if (id) {
+          const videoIds = [];
+          for (var i = 0; i < id.length; i++) {
+            videoIds.push(id[i].fileId);
+          }
+          let removeFromCollectionsPromise = new Promise(function(resolve, reject) {
+            let removeFromCollectionsResult = knex('files_collections')
+              .del()
+              .whereIn('fileId', videoIds)
+            removeFromCollectionsResult.then(function(count) {
+              resolve(count);
+            }).catch(function(err) {
+              console.log('error removing file ' + err);
+            });
+          })
+    
+          let removeFromTagsPromise = new Promise(function(resolve, reject) {
+            let removeFromTagsResult = knex('files_tags')
+              .del()
+              .whereIn('fileId', videoIds)
+            removeFromTagsResult.then(function(count) {
+              resolve(count);
+            }).catch(function(err) {
+              console.log('error removing file ' + err);
+            });
+          })
+          
+          Promise.all([removeFromCollectionsPromise, removeFromTagsPromise]).then(function() {
+            let removeVideoResult = knex('files')
+              .del()
+              .whereIn('fileId', videoIds)
+            removeVideoResult.then(function() {
+              mainWindow.send(RETURN_FILES_CLEARED, args);
+            });
+          }).catch(function(err) {
+            console.log('Error removing videos');
+          });
+        } else {
+          console.log('No video files to remove');
+        }
+      });
+      break;
+    case 'images':
+      console.log('Clear image files');
+      let getImageResult = knex('files')
+        .select('fileId')
+        .where({'fileType': 'image'})
+      getImageResult.then(function(id) {
+        console.log(id);
+        if (id) {
+          const imageIds = [];
+          for (var i = 0; i < id.length; i++) {
+            imageIds.push(id[i].fileId);
+          }
+          let removeFromCollectionsPromise = new Promise(function(resolve, reject) {
+            let removeFromCollectionsResult = knex('files_collections')
+              .del()
+              .whereIn('fileId', imageIds)
+            removeFromCollectionsResult.then(function(count) {
+              resolve(count);
+            }).catch(function(err) {
+              console.log('error removing file ' + err);
+            });
+          })
+
+          let removeFromTagsPromise = new Promise(function(resolve, reject) {
+            let removeFromTagsResult = knex('files_tags')
+              .del()
+              .whereIn('fileId', imageIds)
+            removeFromTagsResult.then(function(count) {
+              resolve(count);
+            }).catch(function(err) {
+              console.log('error removing file ' + err);
+            });
+          })
+          
+          Promise.all([removeFromCollectionsPromise, removeFromTagsPromise]).then(function() {
+            let removeImageResult = knex('files')
+              .del()
+              .whereIn('fileId', imageIds)
+            removeImageResult.then(function() {
+              mainWindow.send(RETURN_FILES_CLEARED, args);
+            });
+          }).catch(function(err) {
+            console.log('Error removing images');
+          });
+        } else {
+          console.log('No image files to remove');
+        }
+      });
+      break;
+    case 'all':
+      let removeFromCollectionsPromise = new Promise(function(resolve, reject) {
+        let removeFromCollectionsResult = knex('files_collections')
+          .del()
+        removeFromCollectionsResult.then(function(count) {
+          resolve(count);
+        }).catch(function(err) {
+          console.log('error removing file ' + err);
+        });
+      })
+
+      let removeFromTagsPromise = new Promise(function(resolve, reject) {
+        let removeFromTagsResult = knex('files_tags')
+          .del()
+        removeFromTagsResult.then(function(count) {
+          resolve(count);
+        }).catch(function(err) {
+          console.log('error removing file ' + err);
+        });
+      })
+          
+      Promise.all([removeFromCollectionsPromise, removeFromTagsPromise]).then(function() {
+        let removeFilesResult = knex('files')
+          .del()
+        removeFilesResult.then(function() {
+          mainWindow.send(RETURN_FILES_CLEARED, args);
+        });
+      }).catch(function(err) {
+        console.log('Error removing files');
+      });
+      break;
+    default:
+      console.log('Error removing files');
+      break;
+  }
+})
+
+ipcMain.on(CLEAR_COLLECTIONS, (event, args) => {
+  console.log(args);
+  switch (args) {
+    case 'videos':
+      let getVideoResult = knex('files')
+        .select('fileId')
+        .where({'fileType': 'video'})
+      getVideoResult.then(function(id) {
+        if (id) {
+          const videoIds = [];
+          for (var i = 0; i < id.length; i++) {
+            videoIds.push(id[i].fileId);
+          }
+          let removeFromCollectionsPromise = new Promise(function(resolve, reject) {
+            let removeFromCollectionsResult = knex('files_collections')
+              .del()
+              .whereIn('fileId', videoIds)
+            removeFromCollectionsResult.then(function(count) {
+              resolve(count);
+            }).catch(function(err) {
+              console.log('error removing collections ' + err);
+            });
+          })
+
+          let removeCollectionsPromise = new Promise(function(resolve, reject) {
+            let removeCollectionsResult = knex('collections')
+              .del()
+              .where('collectionType', 'video')
+            removeCollectionsResult.then(function(count) {
+              resolve(count);
+            }).catch(function(err) {
+              console.log('error removing collections ' + err);
+            });
+          })
+      
+          Promise.all([removeFromCollectionsPromise, removeCollectionsPromise]).then(function() {
+            mainWindow.send(RETURN_COLLECTIONS_CLEARED, args);
+          });
+        }
+      })
+      break;
+    case 'images':
+      let getImageResult = knex('files')
+        .select('fileId')
+        .where({'fileType': 'image'})
+      getImageResult.then(function(id) {
+        if (id) {
+          const imageIds = [];
+          for (var i = 0; i < id.length; i++) {
+            imageIds.push(id[i].fileId);
+          }
+          let removeFromCollectionsPromise = new Promise(function(resolve, reject) {
+            let removeFromCollectionsResult = knex('files_collections')
+              .del()
+              .whereIn('fileId', imageIds)
+            removeFromCollectionsResult.then(function(count) {
+              resolve(count);
+            }).catch(function(err) {
+              console.log('error removing collections ' + err);
+            });
+          })
+
+          let removeCollectionsPromise = new Promise(function(resolve, reject) {
+            let removeCollectionsResult = knex('collections')
+              .del()
+              .where('collectionType', 'image')
+            removeCollectionsResult.then(function(count) {
+              resolve(count);
+            }).catch(function(err) {
+              console.log('error removing collections ' + err);
+            });
+          })
+          
+          Promise.all([removeFromCollectionsPromise, removeCollectionsPromise]).then(function() {
+              mainWindow.send(RETURN_COLLECTIONS_CLEARED, args);
+          }).catch(function(err) {
+            console.log('Error removing collections');
+          });
+        } else {
+          console.log('No collections to remove');
+        }
+      });
+      break;
+    case 'all':
+      let removeFromCollectionsPromise = new Promise(function(resolve, reject) {
+        let removeFromCollectionsResult = knex('files_collections')
+          .del()
+        removeFromCollectionsResult.then(function(count) {
+          resolve(count);
+        }).catch(function(err) {
+          console.log('error removing collections ' + err);
+        });
+      })
+
+      let removeCollectionsPromise = new Promise(function(resolve, reject) {
+        let removeCollectionsResult = knex('collections')
+          .del()
+        removeCollectionsResult.then(function(count) {
+          resolve(count);
+        }).catch(function(err) {
+          console.log('error removing collections ' + err);
+        });
+      })
+          
+      Promise.all([removeFromCollectionsPromise, removeCollectionsPromise]).then(function() {
+        mainWindow.send(RETURN_COLLECTIONS_CLEARED, args);
+      })
+      break;
+    default:
+      console.log('Error removing collections');
+      break;
+  }
+})
+
+ipcMain.on(CLEAR_TAGS, (event, args) => {
+  console.log(args);
+  switch (args) {
+    case 'videos':
+      let getVideoResult = knex('files')
+        .select('fileId')
+        .where({'fileType': 'video'})
+      getVideoResult.then(function(id) {
+        if (id) {
+          const videoIds = [];
+          for (var i = 0; i < id.length; i++) {
+            videoIds.push(id[i].fileId);
+          }
+          let removeFromTagsPromise = new Promise(function(resolve, reject) {
+            let removeFromTagsResult = knex('files_tags')
+              .del()
+              .whereIn('fileId', videoIds)
+            removeFromTagsResult.then(function(count) {
+              resolve(count);
+            }).catch(function(err) {
+              console.log('error removing tags ' + err);
+            });
+          })
+
+          let removeTagsPromise = new Promise(function(resolve, reject) {
+            let removeTagsResult = knex('tags')
+              .del()
+              .where('tagType', 'video')
+            removeTagsResult.then(function(count) {
+              resolve(count);
+            }).catch(function(err) {
+              console.log('error removing tags ' + err);
+            });
+          })
+      
+          Promise.all([removeFromTagsPromise, removeTagsPromise]).then(function() {
+            mainWindow.send(RETURN_TAGS_CLEARED, args);
+          });
+        }
+      })
+      break;
+    case 'images':
+      let getImageResult = knex('files')
+        .select('fileId')
+        .where({'fileType': 'image'})
+      getImageResult.then(function(id) {
+        if (id) {
+          const imageIds = [];
+          for (var i = 0; i < id.length; i++) {
+            imageIds.push(id[i].fileId);
+          }
+          let removeFromtagsPromise = new Promise(function(resolve, reject) {
+            let removeFromtagsResult = knex('files_tags')
+              .del()
+              .whereIn('fileId', imageIds)
+            removeFromtagsResult.then(function(count) {
+              resolve(count);
+            }).catch(function(err) {
+              console.log('error removing tags ' + err);
+            });
+          })
+
+          let removeTagsPromise = new Promise(function(resolve, reject) {
+            let removeTagsResult = knex('tags')
+              .del()
+              .where('tagType', 'image')
+            removeTagsResult.then(function(count) {
+              resolve(count);
+            }).catch(function(err) {
+              console.log('error removing tags ' + err);
+            });
+          })
+          
+          Promise.all([removeFromtagsPromise, removeTagsPromise]).then(function() {
+            mainWindow.send(RETURN_TAGS_CLEARED, args);
+          }).catch(function(err) {
+            console.log('Error removing tags');
+          });
+        } else {
+          console.log('No collections to remove');
+        }
+      });
+      break;
+    case 'all':
+      let removeFromTagsPromise = new Promise(function(resolve, reject) {
+        let removeFromTagsResult = knex('files_tags')
+          .del()
+        removeFromTagsResult.then(function(count) {
+          resolve(count);
+        }).catch(function(err) {
+          console.log('error removing tags ' + err);
+        });
+      })
+
+      let removeTagsPromise = new Promise(function(resolve, reject) {
+        let removeTagsResult = knex('tags')
+          .del()
+        removeTagsResult.then(function(count) {
+          resolve(count);
+        }).catch(function(err) {
+          console.log('error removing tags ' + err);
+        });
+      })
+          
+      Promise.all([removeFromTagsPromise, removeTagsPromise]).then(function() {
+        mainWindow.send(RETURN_TAGS_CLEARED, args);
+      })
+      break;
+    default:
+      console.log('Error removing tags');
+      break;
   }
 })

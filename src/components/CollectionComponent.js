@@ -132,6 +132,8 @@ class ImageCollectionPage extends React.Component {
   
   getAllFiles() {
     ipcRenderer.send(GET_FILE_RECORDS, {fileType: this.state.fileType, currentCollection: this.state.currentCollection, currentTags: this.state.tagSelectedOption});
+    ipcRenderer.send(GET_ALL_COLLECTIONS, {fileType: this.state.fileType});
+    ipcRenderer.send(GET_ALL_TAGS, {fileType: this.state.fileType});
     this.setState({ loading: true });
   }
 
@@ -153,13 +155,15 @@ class ImageCollectionPage extends React.Component {
   submitNewImage() {
     console.log("submitNewImage");
     if (this.state.fileName && this.state.filePath) {
-      let fileNameInUser = false;
-      for (var i = 0; i < this.state.allImagesData.length; i++) {
-        if (this.state.allImagesData[i].fileName === this.state.fileName) {
-          fileNameInUser = true;
+      let fileNameInUse = false;
+      if (this.state.allImagesData && this.state.allImagesData.length) {
+        for (var i = 0; i < this.state.allImagesData.length; i++) {
+          if (this.state.allImagesData[i].fileName === this.state.fileName) {
+            fileNameInUse = true;
+          }
         }
       }
-      if (!fileNameInUser) {
+      if (!fileNameInUse) {
         let params = {
           fileType: this.state.fileType,
           fileName: this.state.fileName,

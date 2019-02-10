@@ -22,5 +22,11 @@ module.exports = {
   DELETE_FILE: 'delete-file',
   RETURN_FILE_DELETED: 'return-file-deleted',
   STREAM_VIDEO: 'stream-video',
-  STOP_STREAM_VIDEO: 'stop-stream-video'
+  STOP_STREAM_VIDEO: 'stop-stream-video',
+  CLEAR_FILES: 'clear-files',
+  RETURN_FILES_CLEARED: 'return-files-cleared',
+  CLEAR_COLLECTIONS: 'clear-collections',
+  RETURN_COLLECTIONS_CLEARED: 'return-collections-cleared',
+  CLEAR_TAGS: 'clear-tags',
+  RETURN_TAGS_CLEARED: 'return-tags-cleared'
 };
