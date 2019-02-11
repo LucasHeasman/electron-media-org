@@ -240,9 +240,8 @@ ipcMain.on(GET_FILE_RECORDS, (event, args) => {
       .from('files')
       .join('files_collections', {'files_collections.fileId': 'files.fileId'})
       .join('collections', {'files_collections.collectionId': 'collections.collectionId'})
-      .join('files_tags', {'files_tags.fileId': 'files.fileId'})
-      .join('tags', {'files_tags.tagId': 'tags.tagId'})
-      .where(params)
+      .where('collections.collectionType', args.fileType)
+      .andWhere('collections.collectionName', args.currentCollection)
       .groupBy('files.fileName');
   } else if(args && args.currentTags && args.currentTags.length) {
     result = knex.select()
@@ -262,7 +261,7 @@ ipcMain.on(GET_FILE_RECORDS, (event, args) => {
     let sendData;
     if (data && data.length) {
       sendData = data;
-      for (var i=0; i<sendData.length; i++) {
+      for (var i=0; i < sendData.length; i++) {
         sendData[i].src  = base64Img.base64Sync(appDataPath + '\\storedFiles\\' + args.fileType + '\\' + sendData[i].fileName);
         sendData[i].path = appDataPath + '\\storedFiles\\' + args.fileType + '\\' + sendData[i].fileName;
         // sendData[i].src = imgSrc;
@@ -275,7 +274,7 @@ ipcMain.on(GET_FILE_RECORDS, (event, args) => {
 
 // Get all Collections with a sum of how many files are in them
 ipcMain.on(GET_ALL_COLLECTIONS, (event, args) => {
-
+ console.log(args);
   // Get total files with the correct filetype
   let totalFilesPromise = new Promise(function(resolve, reject) {
     let totalFilesResult = knex('files')
@@ -403,7 +402,8 @@ ipcMain.on(ADD_FILE, (event, args) => {
       if (args.oldCollections && args.oldCollections.length) {
         let collectionResult = knex('collections')
           .select('collectionId')
-          .whereIn('collectionName', args.oldCollections);
+          .whereIn('collectionName', args.oldCollections)
+          .andWhere('collectionType', args.fileType);
         collectionResult.then(function(id) {
           resolve(id);
         });
@@ -417,7 +417,8 @@ ipcMain.on(ADD_FILE, (event, args) => {
       if (args.oldTags && args.oldTags.length) {
         let tagResult = knex('tags')
           .select('tagId')
-          .whereIn('tag', args.oldTags);
+          .whereIn('tag', args.oldTags)
+          .andWhere('tagType', args.fileType);
         tagResult.then(function(id) {
           resolve(id);
         });

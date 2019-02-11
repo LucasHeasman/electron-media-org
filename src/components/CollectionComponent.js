@@ -36,7 +36,7 @@ class ImageCollectionPage extends React.Component {
       viewModal: false,
       fileName: null,
       filePath: null,
-      description: null,
+      description: '',
       addCollectionSelectedOption: null,
       addTagSelected: null,
       tagSelectedOption: null,
@@ -60,6 +60,9 @@ class ImageCollectionPage extends React.Component {
   }
 
   componentWillMount() {
+    if (this.state.fileType != this.props.fileType) {
+      this.setState({fileType: this.props.fileType});
+    }
     this.setState({ loading: true });
     ipcRenderer.send(GET_FILE_RECORDS, {fileType: this.state.fileType, currentCollection: this.state.currentCollection, currentTags: this.state.tagSelectedOption});
     ipcRenderer.send(GET_ALL_COLLECTIONS, {fileType: this.state.fileType});
@@ -81,7 +84,7 @@ class ImageCollectionPage extends React.Component {
   }
 
   toggle() {
-    this.setState({ modal: !this.state.modal });
+    this.setState({ modal: !this.state.modal, description: '' });
   }
 
   handleFileInput(e) {
@@ -138,7 +141,7 @@ class ImageCollectionPage extends React.Component {
   }
 
   setCollection(e) {
-    // console.log(e.target.value);
+    console.log(e.target.value);
     if (!this.state.loading) {
       ipcRenderer.send(GET_FILE_RECORDS, {fileType: this.state.fileType, currentCollection: e.target.value, currentTags: this.state.tagSelectedOption});
       this.setState({ currentCollection: e.target.value, loading: true });

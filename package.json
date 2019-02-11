@@ -25,7 +25,7 @@
     "postinstall": "electron-builder install-app-deps",
     "postpackage": "electron-packager ./ --overwrite --icon=src/assets/icons/win/icon.ico --out=./builds",
     "package-mac": "electron-packager . --overwrite --platform=darwin --arch=x64 --icon=src/assets/icons/mac/icon.icns --out=builds",
-    "package-win": "electron-packager . electron-media-org --overwrite --asar=true --platform=win32 --arch=ia32 --icon=src/assets/icons/win/icon.ico --out=builds --version-string.CompanyName=LH --version-string.FileDescription=LH --version-string.ProductName=\"Electron Media Org\"",    
+    "package-win": "electron-packager . electron-media-org --overwrite --asar=true --platform=win32 --arch=ia32 --icon=src/assets/icons/win/icon.ico --out=builds --version-string.CompanyName=LH --version-string.FileDescription=LH --version-string.ProductName=\"Electron Media Org\"",
     "package-linux": "electron-packager . electron-media-org --overwrite --asar=true --platform=linux --arch=x64 --icon=src/assets/icons/png/1024x1024.png --out=builds"
   },
   "devDependencies": {
