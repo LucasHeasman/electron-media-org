@@ -55,7 +55,7 @@ const {
 
 // App data path
 const appDataPath = app.getPath('userData');
-console.log(appDataPath)
+// console.log(appDataPath)
 
 // Create folders if they don't exist
 var dir = appDataPath + '/storedFiles';
@@ -71,6 +71,47 @@ if (!fs.existsSync(dir + '/video')) {
   fs.mkdirSync(dir + '/video');
 }
 
+// Create database tables if they don't exist
+knex.schema.createTableIfNotExists('files', function(table) {
+  table.increments('fileId').primary();
+  table.string('fileName', 128);
+  table.string('description', 128);
+  table.string('dateAdded', 128);
+  table.string('fileType', 128); 
+}).then(function () {
+  console.log('files table created');
+});
+
+knex.schema.createTableIfNotExists('tags', function(table) {
+  table.increments('tagId').primary();
+  table.string('tag', 128);
+  table.string('tagType', 128);
+}).then(function () {
+  console.log('tags table created');
+});
+
+knex.schema.createTableIfNotExists('collections', function(table) {
+  table.increments('collectionId').primary();
+  table.string('collectionName', 128);
+  table.string('collectionType', 128);
+}).then(function () {
+  console.log('collections table created');
+});
+
+knex.schema.createTableIfNotExists('files_collections', function(table) {
+  table.integer('fileId');
+  table.integer('collectionId');
+}).then(function () {
+  console.log('files_collections table created');
+});
+
+knex.schema.createTableIfNotExists('files_tags', function(table) {
+  table.integer('fileId');
+  table.integer('tagId');
+}).then(function () {
+  console.log('files_tags table created');
+});
+
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
@@ -84,7 +125,7 @@ if ( process.defaultApp || /[\\/]electron-prebuilt[\\/]/.test(process.execPath) 
 function createWindow() {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width:1600, height:1200, minWidth: 850, minHeight: 650, show: false, icon:__dirname+'/src/assets/images/mediaIcon.png'
+    width:1600, height:1200, minWidth: 850, minHeight: 650, show: false, icon:__dirname+'/src/assets/icons/png/64x64.png'
   });
 
   // and load the index.html of the app.
@@ -110,9 +151,9 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     // Open the DevTools automatically if developing
-    // if ( dev ) {
-    //   mainWindow.webContents.openDevTools();
-    // }
+    if ( dev ) {
+      mainWindow.webContents.openDevTools();
+    }
   });
 
   // Emitted when the window is closed.
@@ -336,7 +377,7 @@ ipcMain.on(ADD_FILE, (event, args) => {
         resolve({newCollections: id});
       });
     } else {
-      resolve({newCollections: null});
+      resolve({newCollections: 0});
     }
   });
 
@@ -349,7 +390,7 @@ ipcMain.on(ADD_FILE, (event, args) => {
         resolve({newTags: id});
       });
     } else {
-      resolve({newTags: null});
+      resolve({newTags: 0});
     }
   });
 
@@ -367,7 +408,7 @@ ipcMain.on(ADD_FILE, (event, args) => {
           resolve(id);
         });
       } else {
-        resolve(null);
+        resolve(false);
       }
     });
 
@@ -381,50 +422,52 @@ ipcMain.on(ADD_FILE, (event, args) => {
           resolve(id);
         });
       } else {
-        resolve(null);
+        resolve(false);
       }
     });
 
     Promise.all([oldCollectionPromise, oldTagPromise]).then(function(values2) {
       console.log(values2);
-      let collectionIds = values2[0];
-      let tagIds = values2[1];
-      if (collectionIds && collectionIds.length) {
-        for (var i=0; i < collectionIds.length; i++) {
-          collectionIds[i].fileId = values[0].fileId[0];
-        }
-      }
-      if (tagIds && tagIds.length) {
-        for (var i=0; i < tagIds.length; i++) {
-          tagIds[i].fileId = values[0].fileId[0];
-        }
-      }
-      // console.log(collectionIds);
-      // console.log(tagIds);
 
       // Add records to link the collections to the file
       let fileCollectionPromise = new Promise(function(resolve, reject) {
-        if (collectionIds && collectionIds.length) {
-          let fileCollectionResult = knex('files_collections')
-            .insert(collectionIds);
-          fileCollectionResult.then(function(data) {
-            resolve(data);
-          });
+        if (values2[0]) {
+          let collectionIds = values2[0];
+          if (collectionIds && collectionIds.length) {
+            for (var i=0; i < collectionIds.length; i++) {
+              collectionIds[i].fileId = values[0].fileId[0];
+            }
+            let fileCollectionResult = knex('files_collections')
+              .insert(collectionIds);
+            fileCollectionResult.then(function(data) {
+              resolve(data);
+            });
+          } else {
+            resolve(false);
+          }
         } else {
-          resolve(null);
+          resolve(false);
         }
       });
 
-       // Add records to link the tags to the file
+      // Add records to link the tags to the file
       let fileTagPromise = new Promise(function(resolve, reject) {
-        if (collectionIds && collectionIds.length) {
-          let fileCollectionResult = knex('files_tags')
-            .insert(tagIds);
-          fileCollectionResult.then(function(data) {
-            resolve(data);
-          });
+        if (values2[1]) {
+          let tagIds = values2[1];
+          if (tagIds && tagIds.length) {
+            for (var i=0; i < tagIds.length; i++) {
+              tagIds[i].fileId = values[0].fileId[0];
+            }
+            let fileTagResult = knex('files_tags')
+              .insert(tagIds);
+            fileTagResult.then(function(data) {
+              resolve(data);
+            });
+          } else {
+            resolve(false);
+          }
         } else {
-          resolve(null);
+          resolve(false);
         }
       });
 

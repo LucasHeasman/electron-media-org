@@ -23,9 +23,17 @@
     "rebuild": "electron-rebuild -f -w sqlite3",
     "package": "webpack --config webpack.build.config.js",
     "postinstall": "electron-builder install-app-deps",
-    "postpackage": "electron-packager ./ --out=./builds"
+    "postpackage": "electron-packager ./ --overwrite --icon=src/assets/icons/win/icon.ico --out=./builds",
+    "package-mac": "electron-packager . --overwrite --platform=darwin --arch=x64 --icon=src/assets/icons/mac/icon.icns --out=builds",
+    "package-win": "electron-packager . electron-media-org --overwrite --asar=true --platform=win32 --arch=ia32 --icon=src/assets/icons/win/icon.ico --out=builds --version-string.CompanyName=LH --version-string.FileDescription=LH --version-string.ProductName=\"Electron Media Org\"",    
+    "package-linux": "electron-packager . electron-media-org --overwrite --asar=true --platform=linux --arch=x64 --icon=src/assets/icons/png/1024x1024.png --out=builds"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "electron": "^1.7.8",
+    "electron-builder": "^20.38.5",
+    "electron-packager": "^12.2.0",
+    "electron-rebuild": "^1.8.2"
+  },
   "dependencies": {
     "base64-img": "^1.0.4",
     "bootstrap": "^4.2.1",
@@ -43,10 +51,6 @@
     "babel-preset-react": "^6.24.1",
     "babili-webpack-plugin": "^0.1.2",
     "css-loader": "^0.28.11",
-    "electron": "^1.7.8",
-    "electron-builder": "^20.38.5",
-    "electron-packager": "^9.1.0",
-    "electron-rebuild": "^1.8.2",
     "extract-text-webpack-plugin": "^3.0.1",
     "file-loader": "^1.1.11",
     "html-webpack-plugin": "^2.28.0",

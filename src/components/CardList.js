@@ -132,7 +132,7 @@ class ImagesList extends React.Component {
     let params = {
       fileId: this.state.viewImageId,
       fileType: this.state.fileType,
-      description: this.state.viewImageDescription,
+      description: this.state.viewImageDescription || '',
       collections: this.state.collectionSelected,
       oldCollections: [],
       newCollections: [],
